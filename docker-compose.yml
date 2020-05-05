@@ -11,5 +11,10 @@ services:
       - database
   database:
     image: "postgres:12-alpine"
+    volumes:
+      - database-data:/var/lib/postgresql/data/
     env_file:
       - ./environment
+
+volumes:
+  database-data:
