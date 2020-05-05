@@ -89,7 +89,7 @@ class ApiController {
         return result("removePlatform", AppIdResponse(id))
     }
 
-    @PostMapping("/api/v1/kubernetes/{namespace}/{deployment}/{id}")
+    @PutMapping("/api/v1/kubernetes/{namespace}/{deployment}/{id}")
     fun updateKubernetes(
             @RequestBody yaml: String,
             @PathVariable("namespace") namespace: String,
@@ -108,7 +108,7 @@ class ApiController {
         return result("updateKubernetes", AppIdResponse(id))
     }
 
-    @PostMapping("/api/v1/opennebula/{id}")
+    @PutMapping("/api/v1/opennebula/{id}")
     fun updateOpenNebula(
             @RequestBody request: OpenNebulaRequest,
             @PathVariable("id") id: Long
