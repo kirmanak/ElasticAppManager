@@ -4,4 +4,4 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ResponseStatus
 
 @ResponseStatus(code = HttpStatus.BAD_REQUEST)
-class NoSuchConfigurationException(id: Long) : Exception("Configuration with id = $id was not found")
+class NoSuchApplicationException(id: Long) : Exception("Application with id = $id was not found")

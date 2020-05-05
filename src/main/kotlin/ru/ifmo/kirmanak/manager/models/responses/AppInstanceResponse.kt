@@ -2,7 +2,7 @@ package ru.ifmo.kirmanak.manager.models.responses
 
 import ru.ifmo.kirmanak.elasticappclient.AppInstance
 
-data class GetPlatformResponse(
+data class AppInstanceResponse(
         private val CPULoad: Double,
         private val RAMLoad: Double,
         private val name: String

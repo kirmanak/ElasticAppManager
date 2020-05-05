@@ -31,7 +31,7 @@ data class OpenNebulaConfigEntity(
         @Id
         @GeneratedValue
         val id: Long? = null
-) : PlatformConfiguration {
+) : AppConfiguration {
 
     override fun getAppClient(): AppClient {
         val client = Client("$login:$password", address)

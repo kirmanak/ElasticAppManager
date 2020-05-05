@@ -4,18 +4,20 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.web.bind.annotation.*
+import ru.ifmo.kirmanak.elasticappclient.AppClient
 import ru.ifmo.kirmanak.elasticappclient.AppClientException
 import ru.ifmo.kirmanak.elasticappclient.AppInstance
-import ru.ifmo.kirmanak.manager.models.exceptions.InvalidPlatformException
-import ru.ifmo.kirmanak.manager.models.exceptions.NoPlatformConnectionException
-import ru.ifmo.kirmanak.manager.models.exceptions.NoSuchConfigurationException
+import ru.ifmo.kirmanak.manager.models.exceptions.InvalidAppConfigException
+import ru.ifmo.kirmanak.manager.models.exceptions.NoAppConnectionException
+import ru.ifmo.kirmanak.manager.models.exceptions.NoSuchApplicationException
 import ru.ifmo.kirmanak.manager.models.requests.OpenNebulaRequest
+import ru.ifmo.kirmanak.manager.models.requests.ScaleRequest
 import ru.ifmo.kirmanak.manager.models.responses.AppIdResponse
-import ru.ifmo.kirmanak.manager.models.responses.GetPlatformResponse
+import ru.ifmo.kirmanak.manager.models.responses.AppInstanceResponse
+import ru.ifmo.kirmanak.manager.storage.entities.AppConfiguration
 import ru.ifmo.kirmanak.manager.storage.entities.ApplicationEntity
 import ru.ifmo.kirmanak.manager.storage.entities.KubernetesConfigEntity
 import ru.ifmo.kirmanak.manager.storage.entities.OpenNebulaConfigEntity
-import ru.ifmo.kirmanak.manager.storage.entities.PlatformConfiguration
 
 @RestController
 class ApiController {
@@ -39,7 +41,7 @@ class ApiController {
         logger.info("createKubernetes(namespace: \"$namespace\", deployment: \"$deployment\", yaml: \"$yaml\")")
 
         val config = KubernetesConfigEntity(deployment, namespace, yaml)
-        checkPlatform(config)
+        checkAppConfig(config)
         val id = putConfiguration(config)
 
         return result("createKubernetes", AppIdResponse(id))
@@ -52,41 +54,33 @@ class ApiController {
         logger.info("createOpenNebula(request = $request)")
 
         val config = OpenNebulaConfigEntity(request.address, request.login, request.password, request.role, request.template, request.vmgroup)
-        checkPlatform(config)
+        checkAppConfig(config)
         val id = putConfiguration(config)
 
         return result("createOpenNebula", AppIdResponse(id))
     }
 
     @GetMapping("/api/v1/app/{id}")
-    fun getPlatformInfo(@PathVariable("id") id: Long): Array<GetPlatformResponse> {
-        logger.info("getPlatformInfo(id: \"$id\")")
+    fun getApplicationInfo(@PathVariable("id") id: Long): Array<AppInstanceResponse> {
+        logger.info("getApplicationInfo(id: \"$id\")")
 
-        val app = appRepository.findByIdOrNull(id) ?: throw NoSuchConfigurationException(id)
-        val client = app.getAppClient()
+        val client = getApp(id).getAppClient()
 
-        val result = client.getAppInstances().map {
-            try {
-                GetPlatformResponse(it.getCPULoad(), it.getRAMLoad(), it.getName())
-            } catch (e: AppClientException) {
-                logger.error("getPlatformInfo: unable to get instance info", e)
-                throw e
-            }
-        }.toTypedArray()
+        val result = getAppInfo(client)
 
-        return result("getPlatformInfo", result)
+        return result("getApplicationInfo", result)
     }
 
     @DeleteMapping("/api/v1/app/{id}")
-    fun removePlatform(@PathVariable("id") id: Long): AppIdResponse {
-        logger.info("removePlatform(id: \"$id\")")
+    fun removeApplication(@PathVariable("id") id: Long): AppIdResponse {
+        logger.info("removeApplication(id: \"$id\")")
 
         if (appRepository.existsById(id))
             appRepository.deleteById(id)
         else
-            throw NoSuchConfigurationException(id)
+            throw NoSuchApplicationException(id)
 
-        return result("removePlatform", AppIdResponse(id))
+        return result("removeApplication", AppIdResponse(id))
     }
 
     @PutMapping("/api/v1/kubernetes/{namespace}/{deployment}/{id}")
@@ -98,11 +92,11 @@ class ApiController {
     ) {
         logger.info("updateKubernetes(namespace: \"$namespace\", deployment: \"$deployment\", id = $id, yaml: \"$yaml\")")
 
-        val app = appRepository.findByIdOrNull(id) ?: throw NoSuchConfigurationException(id)
-        val currentConfig = app.kubernetesConfig ?: throw NoSuchConfigurationException(id)
+        val app = getApp(id)
+        val currentConfig = app.kubernetesConfig ?: throw NoSuchApplicationException(id)
         val updated = KubernetesConfigEntity(deployment, namespace, yaml, app, currentConfig.id)
 
-        checkPlatform(updated)
+        checkAppConfig(updated)
         putConfiguration(updated)
     }
 
@@ -113,35 +107,48 @@ class ApiController {
     ) {
         logger.info("updateOpenNebula(request = $request, id = $id)")
 
-        val app = appRepository.findByIdOrNull(id) ?: throw NoSuchConfigurationException(id)
-        val currentConfig = app.openNebulaConfig ?: throw NoSuchConfigurationException(id)
+        val app = getApp(id)
+        val currentConfig = app.openNebulaConfig ?: throw NoSuchApplicationException(id)
         val config = OpenNebulaConfigEntity(
                 request.address, request.login, request.password, request.role,
                 request.template, request.vmgroup, app, currentConfig.id
         )
 
-        checkPlatform(config)
+        checkAppConfig(config)
         putConfiguration(config)
     }
 
-    private fun checkPlatform(config: PlatformConfiguration) {
-        logger.info("checkPlatform(config = $config)")
+    @PatchMapping("/api/v1/app/{id}")
+    fun scaleApplication(@PathVariable("id") id: Long, @RequestBody request: ScaleRequest): Array<AppInstanceResponse> {
+        logger.info("scaleApplication(id = $id, request = $request)")
+
+        val client = getApp(id).getAppClient()
+
+        client.scaleInstances(request.incrementBy)
+
+        val result = getAppInfo(client)
+
+        return result("scaleApplication", result)
+    }
+
+    private fun checkAppConfig(config: AppConfiguration) {
+        logger.info("checkAppConfig(config = $config)")
 
         val instances: Array<AppInstance>
         try {
             instances = config.getAppClient().getAppInstances()
         } catch (e: AppClientException) {
-            logger.error("checkPlatform: no connection", e)
-            throw NoPlatformConnectionException(e)
+            logger.error("checkAppConfig: no connection", e)
+            throw NoAppConnectionException(e)
         }
 
-        logger.info("checkPlatform: instances count = ${instances.size}")
+        logger.info("checkAppConfig: instances count = ${instances.size}")
         for (instance in instances) {
             try {
-                logger.info("checkPlatform: instance(name = \"${instance.getName()}\", CPU = ${instance.getCPULoad()}), RAM = ${instance.getRAMLoad()}")
+                logger.info("checkAppConfig: instance(name = \"${instance.getName()}\", CPU = ${instance.getCPULoad()}), RAM = ${instance.getRAMLoad()}")
             } catch (e: AppClientException) {
-                logger.error("checkPlatform: unable to get instance info", e)
-                throw InvalidPlatformException(e)
+                logger.error("checkAppConfig: unable to get instance info", e)
+                throw InvalidAppConfigException(e)
             }
         }
     }
@@ -163,7 +170,18 @@ class ApiController {
     }
 
     private fun <Result> result(method: String, result: Result): Result {
-        logger.info("$method result: $result")
+        logger.info("$method result: ${result.toString()}")
         return result
     }
+
+    private fun getApp(id: Long) = appRepository.findByIdOrNull(id) ?: throw NoSuchApplicationException(id)
+
+    private fun getAppInfo(client: AppClient) = client.getAppInstances().map {
+        try {
+            AppInstanceResponse(it.getCPULoad(), it.getRAMLoad(), it.getName())
+        } catch (e: AppClientException) {
+            logger.error("getAppInfo: unable to get instance info", e)
+            throw e
+        }
+    }.toTypedArray()
 }

@@ -19,7 +19,7 @@ data class ApplicationEntity(
         @Id
         @GeneratedValue
         val id: Long? = null
-) : PlatformConfiguration {
+) : AppConfiguration {
     override fun getAppClient(): AppClient {
         val configuration = arrayOf(kubernetesConfig, openNebulaConfig).first { it != null }
                 ?: throw IllegalStateException("Exactly one configuration must not be null")

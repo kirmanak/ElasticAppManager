@@ -3,9 +3,9 @@ package ru.ifmo.kirmanak.manager.storage.entities
 import ru.ifmo.kirmanak.elasticappclient.AppClient
 
 /**
- * Represents configuration of connection to a virtualized infrastructure platfrom
+ * Represents configuration of connection to an application hosted in a virtualized infrastructure
  */
-interface PlatformConfiguration {
+interface AppConfiguration {
     /**
      * Creates elastic application client out of the configuration
      */

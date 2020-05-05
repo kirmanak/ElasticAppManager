@@ -24,7 +24,7 @@ data class KubernetesConfigEntity(
         @Id
         @GeneratedValue
         val id: Long? = null
-) : PlatformConfiguration {
+) : AppConfiguration {
 
     override fun getAppClient(): AppClient {
         val configReader = StringReader(yaml)
