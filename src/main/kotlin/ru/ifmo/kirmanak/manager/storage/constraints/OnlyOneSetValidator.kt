@@ -4,7 +4,7 @@ import org.springframework.beans.BeanWrapperImpl
 import javax.validation.ConstraintValidator
 import javax.validation.ConstraintValidatorContext
 
-class OnlyOneOfValidator : ConstraintValidator<OnlyOneSetConstraint, Any> {
+class OnlyOneSetValidator : ConstraintValidator<OnlyOneSetConstraint, Any> {
     private lateinit var columns: Array<String>
 
     override fun initialize(constraintAnnotation: OnlyOneSetConstraint) {

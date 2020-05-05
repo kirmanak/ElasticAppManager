@@ -4,7 +4,7 @@ import javax.validation.Constraint
 import javax.validation.Payload
 import kotlin.reflect.KClass
 
-@Constraint(validatedBy = [OnlyOneOfValidator::class])
+@Constraint(validatedBy = [OnlyOneSetValidator::class])
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class OnlyOneSetConstraint(
