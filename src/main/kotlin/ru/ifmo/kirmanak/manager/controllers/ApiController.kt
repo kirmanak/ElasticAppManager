@@ -170,7 +170,12 @@ class ApiController {
     }
 
     private fun <Result> result(method: String, result: Result): Result {
-        logger.info("$method result: ${result.toString()}")
+        logger.info("$method result: $result")
+        return result
+    }
+
+    private fun <Result> result(method: String, result: Array<Result>): Array<Result> {
+        logger.info("$method result: ${result.contentToString()}")
         return result
     }
 
