@@ -1,0 +1,5 @@
+POSTGRES_PASSWORD=elastic_password
+POSTGRES_USER=elastic_user
+POSTGRES_DB=elastic_manager
+POSTGRES_HOST=database
+POSTGRES_PORT=5432
