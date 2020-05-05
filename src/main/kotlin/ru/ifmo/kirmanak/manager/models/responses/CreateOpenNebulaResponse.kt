@@ -1,5 +1,5 @@
 package ru.ifmo.kirmanak.manager.models.responses
 
-data class CreateKubernetesResponse(
+data class CreateOpenNebulaResponse(
         val platformId: Long
 )

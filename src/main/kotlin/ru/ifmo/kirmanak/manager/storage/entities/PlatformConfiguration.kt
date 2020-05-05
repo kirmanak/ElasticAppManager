@@ -1,4 +1,4 @@
-package ru.ifmo.kirmanak.manager.configuration
+package ru.ifmo.kirmanak.manager.storage.entities
 
 import ru.ifmo.kirmanak.elasticappclient.AppClient
 
