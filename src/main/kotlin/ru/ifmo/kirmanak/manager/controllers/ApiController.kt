@@ -95,7 +95,7 @@ class ApiController {
             @PathVariable("namespace") namespace: String,
             @PathVariable("deployment") deployment: String,
             @PathVariable("id") id: Long
-    ): AppIdResponse {
+    ) {
         logger.info("updateKubernetes(namespace: \"$namespace\", deployment: \"$deployment\", id = $id, yaml: \"$yaml\")")
 
         val app = appRepository.findByIdOrNull(id) ?: throw NoSuchConfigurationException(id)
@@ -104,15 +104,13 @@ class ApiController {
 
         checkPlatform(updated)
         putConfiguration(updated)
-
-        return result("updateKubernetes", AppIdResponse(id))
     }
 
     @PutMapping("/api/v1/opennebula/{id}")
     fun updateOpenNebula(
             @RequestBody request: OpenNebulaRequest,
             @PathVariable("id") id: Long
-    ): AppIdResponse {
+    ) {
         logger.info("updateOpenNebula(request = $request, id = $id)")
 
         val app = appRepository.findByIdOrNull(id) ?: throw NoSuchConfigurationException(id)
@@ -124,8 +122,6 @@ class ApiController {
 
         checkPlatform(config)
         putConfiguration(config)
-
-        return result("updateOpenNebula", AppIdResponse(id))
     }
 
     private fun checkPlatform(config: PlatformConfiguration) {
