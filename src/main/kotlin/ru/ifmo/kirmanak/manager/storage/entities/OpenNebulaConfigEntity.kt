@@ -38,4 +38,7 @@ data class OpenNebulaConfigEntity(
         return AppClientFactory.getClient(client, vmgroup, role, template)
     }
 
+    override fun toString(): String {
+        return "OpenNebulaConfigEntity(address='$address', login='$login', password='$password', role=$role, template=$template, vmgroup=$vmgroup, application=${application?.id}, id=$id)"
+    }
 }

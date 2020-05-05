@@ -32,4 +32,7 @@ data class KubernetesConfigEntity(
         return AppClientFactory.getClient(client, namespace, deployment)
     }
 
+    override fun toString(): String {
+        return "KubernetesConfigEntity(deployment='$deployment', namespace='$namespace', yaml='$yaml', application=${application?.id}, id=$id)"
+    }
 }
