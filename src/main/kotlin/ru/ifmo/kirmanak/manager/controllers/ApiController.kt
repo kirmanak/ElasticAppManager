@@ -12,8 +12,7 @@ import ru.ifmo.kirmanak.manager.models.exceptions.NoAppConnectionException
 import ru.ifmo.kirmanak.manager.models.exceptions.NoSuchApplicationException
 import ru.ifmo.kirmanak.manager.models.requests.OpenNebulaRequest
 import ru.ifmo.kirmanak.manager.models.requests.ScaleRequest
-import ru.ifmo.kirmanak.manager.models.responses.AppIdResponse
-import ru.ifmo.kirmanak.manager.models.responses.AppInstanceResponse
+import ru.ifmo.kirmanak.manager.models.responses.*
 import ru.ifmo.kirmanak.manager.storage.entities.AppConfiguration
 import ru.ifmo.kirmanak.manager.storage.entities.ApplicationEntity
 import ru.ifmo.kirmanak.manager.storage.entities.KubernetesConfigEntity
@@ -69,6 +68,32 @@ class ApiController {
         val result = getAppInfo(client)
 
         return result("getApplicationInfo", result)
+    }
+
+    @GetMapping("/api/v1/app")
+    fun getAppConfigurations(): AppConfigResponse {
+        logger.info("getAppConfigurations()")
+
+        val apps = appRepository.findAll()
+        val kubernetesApps = apps.mapNotNull {
+            KubernetesConfigResponse(
+                    namespace = it.kubernetesConfig?.namespace ?: return@mapNotNull null,
+                    deployment = it.kubernetesConfig.deployment,
+                    appId = it.id ?: throw IllegalStateException("Id must not be null if data is retrieved from DB")
+            )
+        }
+
+        val openNebulaApps = apps.mapNotNull {
+            OpenNebulaConfigResponse(
+                    address = it.openNebulaConfig?.address ?: return@mapNotNull null,
+                    appId = it.id ?: throw IllegalStateException("Id must not be null if data is retrieved from DB"),
+                    role = it.openNebulaConfig.role,
+                    template = it.openNebulaConfig.template,
+                    vmgroup = it.openNebulaConfig.vmgroup
+            )
+        }
+
+        return result("getAppConfigurations", AppConfigResponse(openNebulaApps, kubernetesApps))
     }
 
     @DeleteMapping("/api/v1/app/{id}")
