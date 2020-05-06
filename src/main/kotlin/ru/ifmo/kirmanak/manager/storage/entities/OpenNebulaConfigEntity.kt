@@ -6,6 +6,7 @@ import ru.ifmo.kirmanak.elasticappclient.AppClientFactory
 import javax.persistence.*
 
 @Entity
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["address", "login", "password", "role", "template", "vmgroup"])])
 data class OpenNebulaConfigEntity(
         @Column(nullable = false)
         val address: String,

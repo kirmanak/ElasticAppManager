@@ -9,11 +9,11 @@ import javax.persistence.*
 @OnlyOneSetConstraint(fields = ["openNebulaConfig", "kubernetesConfig"])
 data class ApplicationEntity(
         @OneToOne(optional = true)
-        @JoinColumn(name = "open_nebula_config")
+        @JoinColumn(name = "kubernetes_config")
         val kubernetesConfig: KubernetesConfigEntity? = null,
 
         @OneToOne(optional = true)
-        @JoinColumn(name = "kubernetes_config")
+        @JoinColumn(name = "open_nebula_config")
         val openNebulaConfig: OpenNebulaConfigEntity? = null,
 
         @Id

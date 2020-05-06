@@ -8,6 +8,7 @@ import java.io.StringReader
 import javax.persistence.*
 
 @Entity
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["deployment", "namespace", "yaml"])])
 data class KubernetesConfigEntity(
         @Column(nullable = false)
         val deployment: String,
