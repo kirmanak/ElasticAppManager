@@ -2,11 +2,13 @@ package ru.ifmo.kirmanak.manager.controllers
 
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.web.bind.annotation.*
 import ru.ifmo.kirmanak.elasticappclient.AppClient
 import ru.ifmo.kirmanak.elasticappclient.AppClientException
 import ru.ifmo.kirmanak.elasticappclient.AppInstance
+import ru.ifmo.kirmanak.manager.models.exceptions.ExistingApplicationException
 import ru.ifmo.kirmanak.manager.models.exceptions.InvalidAppConfigException
 import ru.ifmo.kirmanak.manager.models.exceptions.NoAppConnectionException
 import ru.ifmo.kirmanak.manager.models.exceptions.NoSuchApplicationException
@@ -41,7 +43,7 @@ class ApiController {
 
         val config = KubernetesConfigEntity(deployment, namespace, yaml)
         checkAppConfig(config)
-        val id = putConfiguration(config)
+        val id = saveConfiguration(config)
 
         return result("createKubernetes", AppIdResponse(id))
     }
@@ -54,7 +56,7 @@ class ApiController {
 
         val config = OpenNebulaConfigEntity(request.address, request.login, request.password, request.role, request.template, request.vmgroup)
         checkAppConfig(config)
-        val id = putConfiguration(config)
+        val id = saveConfiguration(config)
 
         return result("createOpenNebula", AppIdResponse(id))
     }
@@ -122,7 +124,7 @@ class ApiController {
         val updated = KubernetesConfigEntity(deployment, namespace, yaml, app, currentConfig.id)
 
         checkAppConfig(updated)
-        putConfiguration(updated)
+        saveConfiguration(updated, app)
     }
 
     @PutMapping("/api/v1/opennebula/{id}")
@@ -140,7 +142,7 @@ class ApiController {
         )
 
         checkAppConfig(config)
-        putConfiguration(config)
+        saveConfiguration(config, app)
     }
 
     @PatchMapping("/api/v1/app/{id}")
@@ -178,20 +180,43 @@ class ApiController {
         }
     }
 
-    private fun putConfiguration(config: OpenNebulaConfigEntity): Long {
-        val saved = openNebulaConfigRepo.save(config)
-        val app = ApplicationEntity(openNebulaConfig = saved)
-        return putApplication(app)
+    private fun saveConfiguration(config: KubernetesConfigEntity, oldApp: ApplicationEntity? = null): Long {
+        val saved: KubernetesConfigEntity
+
+        try {
+            saved = kubernetesConfigRepo.save(config)
+        } catch (e: DataIntegrityViolationException) {
+            val existing = kubernetesConfigRepo.findByNamespaceAndDeploymentAndYaml(
+                    config.namespace, config.deployment, config.yaml
+            ) ?: throw e
+            val id = existing.application?.id ?: throw e
+            throw ExistingApplicationException(id)
+        }
+
+        val app = ApplicationEntity(kubernetesConfig = saved, id = oldApp?.id)
+        return saveApplication(app)
     }
 
-    private fun putConfiguration(config: KubernetesConfigEntity): Long {
-        val saved = kubernetesConfigRepo.save(config)
-        val app = ApplicationEntity(kubernetesConfig = saved)
-        return putApplication(app)
+    private fun saveConfiguration(config: OpenNebulaConfigEntity, oldApp: ApplicationEntity? = null): Long {
+        val saved: OpenNebulaConfigEntity
+
+        try {
+            saved = openNebulaConfigRepo.save(config)
+        } catch (e: DataIntegrityViolationException) {
+            val existing = openNebulaConfigRepo.findByAddressAndLoginAndPasswordAndRoleAndTemplateAndVmgroup(
+                    config.address, config.login, config.password, config.role, config.template, config.vmgroup
+            ) ?: throw e
+            val id = existing.application?.id ?: throw e
+            throw ExistingApplicationException(id)
+        }
+
+        val app = ApplicationEntity(openNebulaConfig = saved, id = oldApp?.id)
+        return saveApplication(app)
     }
 
-    private fun putApplication(app: ApplicationEntity): Long {
-        return appRepository.save(app).id ?: throw IllegalStateException("Id for a new application was not generated")
+    private fun saveApplication(app: ApplicationEntity): Long {
+        return appRepository.save(app).id
+                ?: throw IllegalStateException("Id for a new application was not generated")
     }
 
     private fun <Result> result(method: String, result: Result): Result {
